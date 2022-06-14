@@ -61,3 +61,23 @@ export class Bot {
     this.status = "DEAD";
   };
 }
+
+export const joinRoom = async (
+  page: Page,
+  roomCode: string,
+  nickname: string
+) => {
+  const url = `${BASE_URL}${roomCode}`;
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1000);
+  const inputSelector =
+    "body > div.pages > div.setNickname.page > form > div.line > input";
+  await page.waitForSelector(inputSelector, {
+    visible: true,
+    timeout: 5000,
+  });
+  await page.focus(inputSelector);
+  await page.type(inputSelector, nickname, { delay: 100 });
+  await page.waitForTimeout(1000);
+  await page.keyboard.press("Enter");
+};
