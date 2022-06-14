@@ -3,7 +3,7 @@ import crypto from "crypto";
 import express from "express";
 import puppeteer from "puppeteer";
 import { AnyInterpreter, interpret } from "xstate";
-import { createBotMachine } from "./botMachine";
+import { createBotMachine } from "./bot/machine";
 
 const app = express();
 
@@ -15,6 +15,7 @@ app.use(express.json());
 const PORT = 3333;
 
 let bots: AnyInterpreter[] = [];
+let botServices: { [id: string]: AnyInterpreter } = {};
 
 app.post("/bots", async (req, res) => {
   const roomCode = req.body.roomCode as string;
@@ -31,7 +32,7 @@ app.post("/bots", async (req, res) => {
   }
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -47,8 +48,7 @@ app.post("/bots", async (req, res) => {
     botService.onTransition((state) => {
       console.log("state: ", state.value);
     });
-    bots.push(botService);
-
+    botServices[id] = botService;
     res.status(201).json({ id: id, roomCode: roomCode, nickname: nickname });
   } catch (err) {
     res.status(500).json({ error: err });
@@ -56,20 +56,17 @@ app.post("/bots", async (req, res) => {
 });
 
 app.delete("/bot/:id", async (req, res) => {
-  if (
-    bots.filter((bot) => bot.machine.context.id === req.params.id).length === 0
-  ) {
+  const { id } = req.params;
+  const botService = botServices[id];
+  if (!botService) {
     const e = new Error("That is not a vaild id to delete");
     res.status(400).json({ error: e });
     return;
   }
   try {
-    const bot = bots.filter(
-      (bot) => bot.machine.context.id === req.params.id
-    )[0];
-    bot.send("KILL");
-    bots = bots.filter((bot) => bot.machine.context.id !== req.params.id);
-    bot.stop();
+    botService.send("KILL");
+    botService.stop();
+    delete botServices[id];
     res.status(200).json({ id: req.params.id });
   } catch (err) {
     res.status(500).json({ error: err });
