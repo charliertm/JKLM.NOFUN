@@ -1,13 +1,15 @@
 import crypto from "crypto";
-import { Page } from "puppeteer";
+import { Browser, ElementHandle, Frame, Page } from "puppeteer";
 import { BASE_URL } from "./constants";
 
 export class Bot {
+  browser: Browser;
   page: Page;
   id: string;
   status: string;
 
-  constructor(page: Page) {
+  constructor(browser: Browser, page: Page) {
+    this.browser = browser;
     this.page = page;
     this.id = crypto.randomUUID();
     this.status = "PREROOM";
@@ -30,8 +32,32 @@ export class Bot {
     this.status = "ROOM";
   };
 
+  joinGame = async () => {
+    await this.page.waitForSelector("iframe");
+
+    const elementHandle = (await this.page.$(
+      "iframe"
+    )) as ElementHandle<Element>;
+
+    console.log("finding frame");
+    const frame = (await elementHandle.contentFrame()) as Frame;
+    await this.page.waitForTimeout(3000);
+
+    while (true) {
+      const checkJoinable = await frame.$eval(".seating", (el) =>
+        el.getAttribute("hidden")
+      );
+      console.log(checkJoinable, typeof checkJoinable);
+      if (typeof checkJoinable === "string") continue;
+      break;
+    }
+
+    await frame.click(`.joinRound`);
+    console.log("Joined round");
+  };
+
   kill = async () => {
-    this.page.close();
+    this.browser.close();
     this.status = "DEAD";
   };
 }

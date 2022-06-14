@@ -20,19 +20,28 @@ app.post("/bots", async (req, res) => {
   if (!roomCode) {
     const e = new Error("You must specify a Room Code");
     res.status(400).json({ error: e });
+    return;
   }
   if (!nickname) {
     const e = new Error("You must specify a Nickname");
     res.status(400).json({ error: e });
+    return;
   }
   try {
     const browser = await puppeteer.launch({
       headless: false,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-web-security",
+      ],
     });
     const page = await browser.newPage();
-    const bot = new Bot(page);
+    const bot = new Bot(browser, page);
     bots.push(bot);
     await bot.joinRoom(roomCode, nickname);
+    await bot.joinGame().catch((e) => console.log(e));
     res
       .status(201)
       .json({ id: bot.id, roomCode: roomCode, nickname: nickname });
@@ -45,6 +54,7 @@ app.delete("/bot/:id", async (req, res) => {
   if (bots.filter((bot) => bot.id === req.params.id).length === 0) {
     const e = new Error("That is not a vaild id to delete");
     res.status(400).json({ error: e });
+    return;
   }
   try {
     const bot = bots.filter((bot) => bot.id === req.params.id)[0];

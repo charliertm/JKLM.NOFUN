@@ -49,6 +49,7 @@ const Home = () => {
       body: JSON.stringify({ roomCode: roomCode, nickname: nickname }),
     };
     const response = await fetch("http://localhost:3333/bots", requestOptions);
+    console.log(response);
     const botData = await response.json();
     setBots((prev) => [...prev, botData]);
     setNickname("");
