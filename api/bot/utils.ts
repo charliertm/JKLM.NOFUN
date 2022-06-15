@@ -44,3 +44,29 @@ export const getFrame = async (page: Page) => {
   const frame = await elementHandle.contentFrame();
   return frame;
 };
+
+export const gameStarted = async (frame: Frame) => {
+  const round = await frame.waitForSelector(".round", { visible: true });
+  return Boolean(round);
+};
+
+export const gameEnded = async (frame: Frame) => {
+  const round = await frame
+    .waitForSelector(".seating", { visible: true })
+    .catch(() => false);
+  return Boolean(round);
+};
+
+export const isSelfTurn = async (frame: Frame) => {
+  const selfTurn = await frame
+    .waitForSelector(".selfTurn", { visible: true })
+    .catch(() => false);
+  return Boolean(selfTurn);
+};
+
+export const isOtherTurn = async (frame: Frame) => {
+  const otherTurn = await frame
+    .waitForSelector(".otherTurn", { visible: true })
+    .catch(() => false);
+  return Boolean(otherTurn);
+};

@@ -1,7 +1,15 @@
 import type { Frame } from "puppeteer";
 import { Browser, Page } from "puppeteer";
 import { assign, createMachine } from "xstate";
-import { getFrame, joinGame, joinRoom } from "./utils";
+import {
+  gameEnded,
+  gameStarted,
+  getFrame,
+  isOtherTurn,
+  isSelfTurn,
+  joinGame,
+  joinRoom,
+} from "./utils";
 
 export const createBotMachine = (
   browser: Browser,
@@ -75,7 +83,81 @@ export const createBotMachine = (
               },
             },
             full: {},
-            joined: {},
+            joined: {
+              invoke: {
+                id: "gameStarted",
+                src: async (context, event) => await gameStarted(context.frame),
+                onDone: {
+                  target: "#bot.game.playing",
+                },
+                onError: {
+                  target: "joined",
+                },
+              },
+            },
+          },
+
+          on: {
+            KILL: { target: "dead" },
+          },
+        },
+        game: {
+          invoke: {
+            id: "gameEnded",
+            src: (context, event) => gameEnded(context.frame),
+            onDone: {
+              target: "room",
+            },
+          },
+          states: {
+            sittingOut: {},
+            playing: {
+              initial: "unknown",
+              states: {
+                unknown: {
+                  invoke: {
+                    id: "isSelfTurn",
+                    src: async (context, event) =>
+                      await isSelfTurn(context.frame),
+                    onDone: [
+                      {
+                        target: "selfTurn",
+                        cond: (context, event) => event.data,
+                      },
+                      {
+                        target: "otherTurn",
+                        cond: (context, event) => !event.data,
+                      },
+                    ],
+                    onError: {
+                      target: "unknown",
+                    },
+                  },
+                },
+                selfTurn: {
+                  invoke: {
+                    id: "isOtherTurn",
+                    src: async (context, event) =>
+                      await isOtherTurn(context.frame),
+                    onDone: {
+                      target: "otherTurn",
+                      cond: (context, event) => event.data,
+                    },
+                  },
+                },
+                otherTurn: {
+                  invoke: {
+                    id: "isSelfTurn",
+                    src: async (context, event) =>
+                      await isSelfTurn(context.frame),
+                    onDone: {
+                      target: "selfTurn",
+                      cond: (context, event) => event.data,
+                    },
+                  },
+                },
+              },
+            },
           },
           on: {
             KILL: { target: "dead" },
@@ -93,6 +175,9 @@ export const createBotMachine = (
           context.browser.close();
         },
       },
+      // guards: {
+      //   gameStarted:
+      // }
     }
   );
 };

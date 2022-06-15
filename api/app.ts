@@ -51,7 +51,8 @@ app.post("/bots", async (req, res) => {
     botServices[id] = botService;
     res.status(201).json({ id: id, roomCode: roomCode, nickname: nickname });
   } catch (err) {
-    res.status(500).json({ error: err });
+    res.status(500).json({ error: err.name });
+    console.log(err);
   }
 });
 
