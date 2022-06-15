@@ -1,7 +1,6 @@
-import type { Frame } from "puppeteer";
-import { Browser, Page } from "puppeteer";
+import type { Browser, Frame, Page } from "puppeteer";
 import { assign, createMachine } from "xstate";
-import { ContextData } from "./types";
+import type { ContextData } from "./types";
 import {
   gameEnded,
   gameStarted,
@@ -37,7 +36,7 @@ export const createBotMachine = (
         preRoom: {
           invoke: {
             id: "joinRoom",
-            src: (context, event) =>
+            src: (context) =>
               joinRoom(context.page, context.roomCode, context.nickname),
             // TODO: handle onError with some kind of top level loading state
             onDone: {
@@ -54,10 +53,10 @@ export const createBotMachine = (
             gettingFrame: {
               invoke: {
                 id: "getFrame",
-                src: (context, event) => getFrame(context.page),
+                src: (context) => getFrame(context.page),
                 onDone: {
                   actions: assign({
-                    frame: (context, event) => event.data,
+                    frame: (_context, event) => event.data,
                   }),
                   target: "loading",
                 },
@@ -70,26 +69,32 @@ export const createBotMachine = (
             loading: {
               // TODO: replace this delay with a conditional to check if the join button exists
               after: {
-                3000: { target: "notJoined" },
+                1000: { target: "notJoined" },
               },
             },
             notJoined: {
-              invoke: {
-                id: "joinGame",
-                src: (context, event) => joinGame(context.frame),
-                onDone: {
-                  target: "joined",
+              invoke: [
+                {
+                  id: "gameStarted",
+                  src: async (context) => await gameStarted(context.frame),
+                  onDone: {
+                    target: "#bot.game.sittingOut",
+                  },
                 },
-                onError: {
-                  target: "loading",
+                {
+                  id: "joinGame",
+                  src: (context) => joinGame(context.frame),
+                  onDone: [{ target: "joined" }],
+                  onError: {
+                    target: "loading",
+                  },
                 },
-              },
+              ],
             },
-            full: {},
             joined: {
               invoke: {
                 id: "gameStarted",
-                src: async (context, event) => await gameStarted(context.frame),
+                src: async (context) => await gameStarted(context.frame),
                 onDone: {
                   target: "#bot.game.playing",
                 },
@@ -105,13 +110,6 @@ export const createBotMachine = (
           },
         },
         game: {
-          invoke: {
-            id: "gameEnded",
-            src: (context, event) => gameEnded(context.frame),
-            onDone: {
-              target: "room",
-            },
-          },
           states: {
             sittingOut: {},
             playing: {
@@ -120,16 +118,15 @@ export const createBotMachine = (
                 unknown: {
                   invoke: {
                     id: "isSelfTurn",
-                    src: async (context, event) =>
-                      await isSelfTurn(context.frame),
+                    src: async (context) => await isSelfTurn(context.frame),
                     onDone: [
                       {
                         target: "selfTurn",
-                        cond: (context, event) => event.data,
+                        cond: (_context, event) => event.data,
                       },
                       {
                         target: "otherTurn",
-                        cond: (context, event) => !event.data,
+                        cond: (_context, event) => !event.data,
                       },
                     ],
                     onError: {
@@ -141,16 +138,15 @@ export const createBotMachine = (
                   invoke: [
                     {
                       id: "isOtherTurn",
-                      src: async (context, event) =>
-                        await isOtherTurn(context.frame),
+                      src: async (context) => await isOtherTurn(context.frame),
                       onDone: {
                         target: "otherTurn",
-                        cond: (context, event) => event.data,
+                        cond: (_context, event) => event.data,
                       },
                     },
                     {
                       id: "typeWord",
-                      src: async (context, event) =>
+                      src: async (context) =>
                         await typeWord(context.frame, context.usedWords),
                       onDone: {
                         actions: assign({
@@ -161,18 +157,35 @@ export const createBotMachine = (
                         }),
                       },
                     },
+                    {
+                      id: "gameEnded",
+                      src: (context) => gameEnded(context.frame),
+                      onDone: {
+                        target: "#bot.room",
+                        cond: (_context, event) => event.data,
+                      },
+                    },
                   ],
                 },
                 otherTurn: {
-                  invoke: {
-                    id: "isSelfTurn",
-                    src: async (context, event) =>
-                      await isSelfTurn(context.frame),
-                    onDone: {
-                      target: "selfTurn",
-                      cond: (context, event) => event.data,
+                  invoke: [
+                    {
+                      id: "isSelfTurn",
+                      src: async (context) => await isSelfTurn(context.frame),
+                      onDone: {
+                        target: "selfTurn",
+                        cond: (_context, event) => event.data,
+                      },
                     },
-                  },
+                    {
+                      id: "gameEnded",
+                      src: (context) => gameEnded(context.frame),
+                      onDone: {
+                        target: "#bot.room",
+                        cond: (_context, event) => event.data,
+                      },
+                    },
+                  ],
                 },
               },
             },
@@ -189,13 +202,10 @@ export const createBotMachine = (
     },
     {
       actions: {
-        closeBrowser: (context, event) => {
+        closeBrowser: (context) => {
           context.browser.close();
         },
       },
-      // guards: {
-      //   gameStarted:
-      // }
     }
   );
 };

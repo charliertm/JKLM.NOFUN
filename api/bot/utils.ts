@@ -16,31 +16,18 @@ export const joinRoom = async (
     timeout: 5000,
   });
   await page.focus(inputSelector);
-  await page.type(inputSelector, nickname, { delay: 100 });
-  await page.waitForTimeout(1000);
+  await page.type(inputSelector, nickname, { delay: 50 });
   await page.keyboard.press("Enter");
 };
 
 export const joinGame = async (frame: Frame) => {
   await frame.waitForSelector(".joinRound");
-  await frame.click(`.joinRound`).catch((e) => console.log(e));
-  console.log("Joined round");
-};
-
-export const gameJoinbale = async (frame: Frame) => {
-  const checkJoinable = await frame.$eval(".seating", (el) =>
-    el.getAttribute("hidden")
-  );
-  console.log(checkJoinable, typeof checkJoinable);
-  return typeof checkJoinable !== "string";
+  await frame.click(`.joinRound`);
 };
 
 export const getFrame = async (page: Page) => {
   await page.waitForSelector("iframe");
-
   const elementHandle = await page.$("iframe");
-
-  console.log("finding frame");
   const frame = await elementHandle.contentFrame();
   return frame;
 };
