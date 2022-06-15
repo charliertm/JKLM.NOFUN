@@ -1,6 +1,7 @@
 import type { Frame } from "puppeteer";
 import { Browser, Page } from "puppeteer";
 import { assign, createMachine } from "xstate";
+import { ContextData } from "./types";
 import {
   gameEnded,
   gameStarted,
@@ -9,6 +10,7 @@ import {
   isSelfTurn,
   joinGame,
   joinRoom,
+  typeWord,
 } from "./utils";
 
 export const createBotMachine = (
@@ -29,6 +31,7 @@ export const createBotMachine = (
         nickname,
         roomCode,
         id,
+        usedWords: [] as string[],
       },
       states: {
         preRoom: {
@@ -135,15 +138,30 @@ export const createBotMachine = (
                   },
                 },
                 selfTurn: {
-                  invoke: {
-                    id: "isOtherTurn",
-                    src: async (context, event) =>
-                      await isOtherTurn(context.frame),
-                    onDone: {
-                      target: "otherTurn",
-                      cond: (context, event) => event.data,
+                  invoke: [
+                    {
+                      id: "isOtherTurn",
+                      src: async (context, event) =>
+                        await isOtherTurn(context.frame),
+                      onDone: {
+                        target: "otherTurn",
+                        cond: (context, event) => event.data,
+                      },
                     },
-                  },
+                    {
+                      id: "typeWord",
+                      src: async (context, event) =>
+                        await typeWord(context.frame, context.usedWords),
+                      onDone: {
+                        actions: assign({
+                          usedWords: (context: ContextData, event) => [
+                            ...context.usedWords,
+                            event.data,
+                          ],
+                        }),
+                      },
+                    },
+                  ],
                 },
                 otherTurn: {
                   invoke: {

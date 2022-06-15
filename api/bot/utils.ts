@@ -1,5 +1,5 @@
 import { Frame, Page } from "puppeteer";
-import { BASE_URL } from "../constants";
+import { BASE_URL, WORDS } from "../constants";
 
 export const joinRoom = async (
   page: Page,
@@ -69,4 +69,26 @@ export const isOtherTurn = async (frame: Frame) => {
     .waitForSelector(".otherTurn", { visible: true })
     .catch(() => false);
   return Boolean(otherTurn);
+};
+
+const getWord = (syllable: string, usedWords: string[]) => {
+  const goodWords = WORDS.filter(
+    (word) => word.includes(syllable) && !(word in usedWords)
+  );
+  const randChoice = (a: any[]) => a[Math.floor(Math.random() * a.length)];
+  return randChoice(goodWords);
+};
+
+export const typeWord = async (frame: Frame, usedWords: string[]) => {
+  await frame.waitForSelector("input.styled", { visible: true });
+  const input = await frame.$("input.styled");
+
+  await frame.waitForSelector(".syllable");
+  const syllableElem = await frame.$(".syllable");
+  const syllable = await frame.evaluate((el) => el.textContent, syllableElem);
+
+  const word = getWord(syllable, usedWords);
+  await input.type(word, { delay: 50 });
+  await input.press("Enter");
+  return word;
 };

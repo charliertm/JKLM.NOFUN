@@ -46,7 +46,12 @@ app.post("/bots", async (req, res) => {
     const botService = interpret(botMachine);
     botService.start();
     botService.onTransition((state) => {
-      console.log("state: ", state.value);
+      console.log(
+        "\nplayer: ",
+        botService.machine.context.nickname,
+        "\nstate: ",
+        state.value
+      );
     });
     botServices[id] = botService;
     res.status(201).json({ id: id, roomCode: roomCode, nickname: nickname });
