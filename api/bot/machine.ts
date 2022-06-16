@@ -1,6 +1,6 @@
 import type { Browser, Frame, Page } from "puppeteer";
 import { assign, createMachine } from "xstate";
-import type { ContextData } from "./types";
+import type { BotConfigData, ContextData } from "./types";
 import {
   gameEnded,
   gameStarted,
@@ -17,7 +17,8 @@ export const createBotMachine = (
   page: Page,
   nickname: string,
   roomCode: string,
-  id: string
+  id: string,
+  config: BotConfigData
 ) => {
   return createMachine(
     {
@@ -30,6 +31,7 @@ export const createBotMachine = (
         nickname,
         roomCode,
         id,
+        config,
         usedWords: [] as string[],
       },
       states: {

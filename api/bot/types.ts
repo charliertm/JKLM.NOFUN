@@ -9,3 +9,9 @@ export type ContextData = {
   id: string;
   usedWords: string[];
 };
+
+export type BotConfigData = {
+  typingSpeed: number;
+  errorRate: number;
+  thinkTime: number;
+};

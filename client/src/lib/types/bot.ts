@@ -3,3 +3,9 @@ export interface BotData {
   nickname: string;
   roomCode: string;
 }
+
+export interface BotConfig {
+  typingSpeed: number;
+  errorRate: number;
+  thinkTime: number;
+}

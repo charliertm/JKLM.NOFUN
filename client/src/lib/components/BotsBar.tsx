@@ -1,4 +1,5 @@
-import { Button, Flex, Heading, Text } from "@chakra-ui/react";
+import { DeleteIcon } from "@chakra-ui/icons";
+import { Flex, Heading, IconButton, Text } from "@chakra-ui/react";
 import { BotData } from "../types/bot";
 
 const BotCard = ({
@@ -11,18 +12,35 @@ const BotCard = ({
   const { id, nickname, roomCode } = bot;
   return (
     <Flex
-      direction={"column"}
-      bgColor={"pink.500"}
+      direction={"row"}
+      bgColor={"purple.500"}
       rounded="md"
-      minW={"10em"}
-      p={4}
+      boxShadow={"md"}
+      minW={"16em"}
+      justify={"space-between"}
       align={"center"}
-      textAlign={"center"}
-      justifyContent="space-around"
+      p={4}
+      mr={2}
     >
-      <Heading color="white">{nickname}</Heading>
-      <Text color={"white"}>{roomCode}</Text>
-      <Button onClick={() => handleDelete(id)}>DELETE</Button>
+      <Flex
+        direction={"column"}
+        align={"center"}
+        textAlign={"center"}
+        justifyContent="space-around"
+      >
+        <Heading color="white" size={"md"}>
+          {nickname}
+        </Heading>
+        <Text color={"white"}>{roomCode}</Text>
+      </Flex>
+      <IconButton
+        aria-label="delete"
+        icon={<DeleteIcon />}
+        color={"white"}
+        variant={"ghost"}
+        size={"lg"}
+        onClick={() => handleDelete(id)}
+      />
     </Flex>
   );
 };
@@ -35,16 +53,17 @@ const BotsBar = ({
   handleDelete: (id: string) => void;
 }) => {
   return (
-    <Flex direction={"column"}>
-      <Heading color="red.500">Active Bots: </Heading>
+    <Flex direction={"column"} bgColor={"white"} rounded="md" boxShadow={"md"}>
+      <Heading color={"purple.500"} size={"md"} p={4}>
+        Active Bots:
+      </Heading>
       <Flex
         direction={"row"}
-        minH={"30vh"}
-        minW={"container.sm"}
-        justify={"space-evenly"}
-        bgColor={"white"}
-        rounded="md"
-        p={4}
+        minH={"20vh"}
+        minW={"container.lg"}
+        justify={"start"}
+        px={4}
+        pb={8}
       >
         {bots.map((bot) => (
           <BotCard key={bot.id} bot={bot} handleDelete={handleDelete} />

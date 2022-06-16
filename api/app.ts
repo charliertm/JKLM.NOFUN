@@ -4,6 +4,7 @@ import express from "express";
 import puppeteer from "puppeteer";
 import { AnyInterpreter, interpret } from "xstate";
 import { createBotMachine } from "./bot/machine";
+import { BotConfigData } from "./bot/types";
 
 const app = express();
 
@@ -20,6 +21,7 @@ let botServices: { [id: string]: AnyInterpreter } = {};
 app.post("/bots", async (req, res) => {
   const roomCode = req.body.roomCode as string;
   const nickname = req.body.nickname as string;
+  const config = req.body.config as BotConfigData;
   if (!roomCode) {
     const e = new Error("You must specify a Room Code");
     res.status(400).json({ error: e });
@@ -42,7 +44,14 @@ app.post("/bots", async (req, res) => {
     });
     const [page] = await browser.pages();
     const id = crypto.randomUUID();
-    const botMachine = createBotMachine(browser, page, nickname, roomCode, id);
+    const botMachine = createBotMachine(
+      browser,
+      page,
+      nickname,
+      roomCode,
+      id,
+      config
+    );
     const botService = interpret(botMachine);
     botService.start();
     botService.onTransition((state) => {

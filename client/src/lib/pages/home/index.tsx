@@ -1,20 +1,11 @@
-import {
-  Button,
-  Flex,
-  Heading,
-  HStack,
-  Input,
-  PinInput,
-  PinInputField,
-} from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { useState } from "react";
+import BotCreator from "../../components/BotCreator";
 import BotsBar from "../../components/BotsBar";
-import { BotData } from "../../types/bot";
+import { BotConfig, BotData } from "../../types/bot";
 
 const Home = () => {
-  const [roomCode, setRoomCode] = useState<string>("");
-  const [nickname, setNickname] = useState<string>("");
   const [bots, setBots] = useState<BotData[]>([]);
 
   const deleteBot = async (id: string) => {
@@ -38,7 +29,11 @@ const Home = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (
+    roomCode: string,
+    nickname: string,
+    config: BotConfig
+  ) => {
     const requestOptions: RequestInit = {
       method: "POST",
       mode: "cors",
@@ -46,13 +41,16 @@ const Home = () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ roomCode: roomCode, nickname: nickname }),
+      body: JSON.stringify({
+        roomCode: roomCode,
+        nickname: nickname,
+        config: config,
+      }),
     };
     const response = await fetch("http://localhost:3333/bots", requestOptions);
     console.log(response);
     const botData = await response.json();
     setBots((prev) => [...prev, botData]);
-    setNickname("");
   };
 
   return (
@@ -62,45 +60,9 @@ const Home = () => {
       w="100vw"
       align={"center"}
       justify={"space-evenly"}
-      bgColor={"pink.100"}
+      bgColor={"gray.50"}
     >
-      <Flex
-        direction={"column"}
-        textAlign={"center"}
-        bgColor={"gray.50"}
-        p={8}
-        rounded={"md"}
-      >
-        <Heading pb={4} color={"red.500"}>
-          ROOM CODE
-        </Heading>
-        <HStack spacing={4} pb={4}>
-          <PinInput
-            type="alphanumeric"
-            onChange={(value) => setRoomCode(value)}
-          >
-            <PinInputField />
-            <PinInputField />
-            <PinInputField />
-            <PinInputField />
-          </PinInput>
-        </HStack>
-        <Input
-          placeholder="nickname"
-          size="md"
-          onChange={(e) => setNickname(e.target.value)}
-          value={nickname}
-          mb={4}
-        />
-        <Button
-          size={"md"}
-          variant={"solid"}
-          colorScheme="pink"
-          onClick={() => handleSubmit()}
-        >
-          CREATE BOT
-        </Button>
-      </Flex>
+      <BotCreator handleSubmit={handleSubmit} />
       <BotsBar bots={bots} handleDelete={deleteBot} />
     </Flex>
   );
