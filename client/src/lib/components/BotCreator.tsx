@@ -2,7 +2,6 @@ import {
   Button,
   Flex,
   FormControl,
-  FormErrorMessage,
   FormLabel,
   Heading,
   HStack,
@@ -16,6 +15,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { DIFFICULTY_COLORS } from "../constants";
 import { BotConfig } from "../types/bot";
 import DifficultyModal from "./DifficultyModal";
 
@@ -99,6 +99,7 @@ const BotCreator = ({ handleSubmit }: BotCreatorProps) => {
       boxShadow={"md"}
       px={8}
       py={4}
+      textColor={"gray.700"}
     >
       <DifficultyModal
         isOpen={isOpen}
@@ -106,7 +107,11 @@ const BotCreator = ({ handleSubmit }: BotCreatorProps) => {
         config={config}
         setConfig={setConfig}
       />
-      <Heading size={"md"} color={"purple.500"} pb={2}>
+      <Heading
+        size={"md"}
+        color={DIFFICULTY_COLORS[difficultyToken] + ".500"}
+        pb={2}
+      >
         Create a Bot
       </Heading>
       <FormControl isInvalid={!validRoomCode}>
@@ -125,7 +130,7 @@ const BotCreator = ({ handleSubmit }: BotCreatorProps) => {
         </HStack>
       </FormControl>
 
-      <FormControl isInvalid={!validNickname} pb={2}>
+      <FormControl pb={2}>
         <FormLabel>Nickname:</FormLabel>
         <Input
           placeholder="Finn the Human"
@@ -134,34 +139,40 @@ const BotCreator = ({ handleSubmit }: BotCreatorProps) => {
           size="md"
           onChange={(e) => setNickname(e.target.value)}
           value={nickname}
-          isInvalid={!validNickname}
         />
-        {!validNickname && (
+        {/* {!validNickname && (
           <FormErrorMessage>
             Must be between 2 and 20 characters
           </FormErrorMessage>
-        )}
+        )} */}
       </FormControl>
       <FormLabel>Difficulty:</FormLabel>
       <RadioGroup
-        defaultValue={"easy"}
+        defaultValue={"Easy"}
         value={difficultyToken}
         onChange={(value) => handleDifficultyChange(value)}
-        colorScheme={"purple"}
         pb={2}
       >
         <Stack direction={"row"}>
-          <Radio value={"Easy"}>Easy</Radio>
-          <Radio value={"Hard"}>Hard</Radio>
-          <Radio value={"Unfair"}>Unfair</Radio>
-          <Radio value={"Custom"}>Custom</Radio>
+          <Radio value={"Easy"} colorScheme={DIFFICULTY_COLORS["Easy"]}>
+            Easy
+          </Radio>
+          <Radio value={"Hard"} colorScheme={DIFFICULTY_COLORS["Hard"]}>
+            Hard
+          </Radio>
+          <Radio value={"Unfair"} colorScheme={DIFFICULTY_COLORS["Unfair"]}>
+            Unfair
+          </Radio>
+          <Radio value={"Custom"} colorScheme={DIFFICULTY_COLORS["Custom"]}>
+            Custom
+          </Radio>
         </Stack>
       </RadioGroup>
       <Spacer pb={2} />
       <Button
         size={"md"}
         variant={"solid"}
-        colorScheme="purple"
+        colorScheme={DIFFICULTY_COLORS[difficultyToken]}
         onClick={() => {
           handleSubmit(roomCode, nickname, config, difficultyToken);
           setNickname("");

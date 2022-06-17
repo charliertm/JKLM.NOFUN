@@ -1,5 +1,6 @@
 import { DeleteIcon } from "@chakra-ui/icons";
 import { Flex, Heading, IconButton, Tag, Text } from "@chakra-ui/react";
+import { DIFFICULTY_COLORS } from "../constants";
 import { BotData } from "../types/bot";
 
 const BotCard = ({
@@ -13,7 +14,7 @@ const BotCard = ({
   return (
     <Flex
       direction={"row"}
-      bgColor={"purple.500"}
+      bgColor={DIFFICULTY_COLORS[difficultyToken] + ".500"}
       rounded="md"
       boxShadow={"md"}
       minW={"16em"}
@@ -33,7 +34,9 @@ const BotCard = ({
         </Heading>
         <Text color={"white"}>{roomCode}</Text>
       </Flex>
-      <Tag>{difficultyToken}</Tag>
+      <Tag colorScheme={"whiteAlpha"} variant={"subtle"} size={"lg"}>
+        {difficultyToken}
+      </Tag>
       <IconButton
         aria-label="delete"
         icon={<DeleteIcon />}
@@ -55,7 +58,7 @@ const BotsBar = ({
 }) => {
   return (
     <Flex direction={"column"} bgColor={"white"} rounded="md" boxShadow={"md"}>
-      <Heading color={"purple.500"} size={"md"} p={4}>
+      <Heading size={"md"} p={4} color={"gray.700"}>
         Active Bots:
       </Heading>
       <Flex
