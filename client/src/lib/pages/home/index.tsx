@@ -1,4 +1,4 @@
-import { Flex } from "@chakra-ui/react";
+import { Flex, useToast } from "@chakra-ui/react";
 import { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { useState } from "react";
 import BotCreator from "../../components/BotCreator";
@@ -7,6 +7,7 @@ import { BotConfig, BotData } from "../../types/bot";
 
 const Home = () => {
   const [bots, setBots] = useState<BotData[]>([]);
+  const toast = useToast();
 
   const deleteBot = async (id: string) => {
     const requestOptions: RequestInit = {
@@ -22,7 +23,6 @@ const Home = () => {
       const responseData = (await response.json()) as { id: string };
       const deletedId = responseData.id;
       const newBots = bots.filter((bot) => deletedId !== bot.id);
-      console.log(newBots);
       setBots(newBots);
     } catch (e) {
       console.log(e);
@@ -32,7 +32,8 @@ const Home = () => {
   const handleSubmit = async (
     roomCode: string,
     nickname: string,
-    config: BotConfig
+    config: BotConfig,
+    difficultyToken: string
   ) => {
     const requestOptions: RequestInit = {
       method: "POST",
@@ -48,9 +49,24 @@ const Home = () => {
       }),
     };
     const response = await fetch("http://localhost:3333/bots", requestOptions);
-    console.log(response);
+    if (response.status === 400) {
+      toast({
+        title: "Invalid Room Code",
+        status: "error",
+        isClosable: true,
+      });
+      return;
+    }
     const botData = await response.json();
-    setBots((prev) => [...prev, botData]);
+    setBots((prev) => [
+      ...prev,
+      { ...botData, difficultyToken: difficultyToken },
+    ]);
+    toast({
+      title: "Bot Created",
+      status: "success",
+      isClosable: true,
+    });
   };
 
   return (

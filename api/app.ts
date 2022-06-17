@@ -3,6 +3,7 @@ import crypto from "crypto";
 import express from "express";
 import puppeteer from "puppeteer";
 import { AnyInterpreter, interpret } from "xstate";
+import { waitFor } from "xstate/lib/waitFor";
 import { createBotMachine } from "./bot/machine";
 import { BotConfigData } from "./bot/types";
 
@@ -15,23 +16,12 @@ app.use(express.json());
 
 const PORT = 3333;
 
-let bots: AnyInterpreter[] = [];
 let botServices: { [id: string]: AnyInterpreter } = {};
 
 app.post("/bots", async (req, res) => {
   const roomCode = req.body.roomCode as string;
   const nickname = req.body.nickname as string;
   const config = req.body.config as BotConfigData;
-  if (!roomCode) {
-    const e = new Error("You must specify a Room Code");
-    res.status(400).json({ error: e });
-    return;
-  }
-  if (!nickname) {
-    const e = new Error("You must specify a Nickname");
-    res.status(400).json({ error: e });
-    return;
-  }
   try {
     const browser = await puppeteer.launch({
       headless: true,
@@ -54,19 +44,29 @@ app.post("/bots", async (req, res) => {
     );
     const botService = interpret(botMachine);
     botService.start();
-    botService.onTransition((state) => {
-      console.log(
-        "\nplayer: ",
-        botService.machine.context.nickname,
-        "\nstate: ",
-        state.value
-      );
-    });
+    // botService.onTransition((state) => {
+    //   console.log(
+    //     "\nplayer: ",
+    //     botService.machine.context.nickname,
+    //     "\nstate: ",
+    //     state.value
+    //   );
+    // });
+    let validRoomCode = true;
+    await waitFor(botService, (state) => state.matches("room.loading")).catch(
+      () => {
+        res.status(400).json({ error: "invalid room code" });
+        validRoomCode = false;
+      }
+    );
+    if (!validRoomCode) {
+      return;
+    }
     botServices[id] = botService;
     res.status(201).json({ id: id, roomCode: roomCode, nickname: nickname });
-  } catch (err) {
-    res.status(500).json({ error: err.name });
-    console.log(err);
+  } catch (e) {
+    res.status(500).json({ error: "Server error" });
+    console.log(e);
   }
 });
 
@@ -74,8 +74,7 @@ app.delete("/bot/:id", async (req, res) => {
   const { id } = req.params;
   const botService = botServices[id];
   if (!botService) {
-    const e = new Error("That is not a vaild id to delete");
-    res.status(400).json({ error: e });
+    res.status(400).json({ error: "Invalid ID for delete" });
     return;
   }
   try {
@@ -83,8 +82,8 @@ app.delete("/bot/:id", async (req, res) => {
     botService.stop();
     delete botServices[id];
     res.status(200).json({ id: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err });
+  } catch (e) {
+    res.status(500).json({ error: "Server Error" });
   }
 });
 

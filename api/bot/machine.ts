@@ -1,15 +1,18 @@
 import type { Browser, Frame, Page } from "puppeteer";
 import { assign, createMachine } from "xstate";
-import type { BotConfigData, ContextData } from "./types";
+import type { BotConfigData } from "./types";
 import {
-  gameEnded,
   gameStarted,
   getFrame,
-  isOtherTurn,
   isSelfTurn,
   joinGame,
   joinRoom,
+  roomDisconnected,
   typeWord,
+  waitForGameEnded,
+  waitForGameStarted,
+  waitForOtherTurn,
+  waitForSelfTurn,
 } from "./utils";
 
 export const createBotMachine = (
@@ -20,194 +23,200 @@ export const createBotMachine = (
   id: string,
   config: BotConfigData
 ) => {
-  return createMachine(
-    {
-      id: "bot",
-      initial: "preRoom",
-      context: {
-        browser,
-        page,
-        frame: undefined as Frame | undefined,
-        nickname,
-        roomCode,
-        id,
-        config,
-        usedWords: [] as string[],
-      },
-      states: {
-        preRoom: {
-          invoke: {
-            id: "joinRoom",
-            src: (context) =>
-              joinRoom(context.page, context.roomCode, context.nickname),
-            // TODO: handle onError with some kind of top level loading state
-            onDone: {
-              target: "room",
-            },
-          },
-          on: {
-            KILL: { target: "dead" },
+  return createMachine({
+    id: "bot",
+    initial: "preRoom",
+    context: {
+      browser,
+      page,
+      frame: undefined as Frame | undefined,
+      nickname,
+      roomCode,
+      id,
+      config,
+    },
+    states: {
+      preRoom: {
+        invoke: {
+          id: "joinRoom",
+          src: (context) =>
+            joinRoom(context.page, context.roomCode, context.nickname),
+          onDone: {
+            target: "room",
           },
         },
-        room: {
-          initial: "gettingFrame",
-          states: {
-            gettingFrame: {
-              invoke: {
-                id: "getFrame",
-                src: (context) => getFrame(context.page),
-                onDone: {
-                  actions: assign({
-                    frame: (_context, event) => event.data,
-                  }),
-                  target: "loading",
+        on: {
+          KILL: { target: "dead" },
+        },
+      },
+      room: {
+        initial: "gettingFrame",
+        states: {
+          noFrame: {
+            invoke: {
+              id: "roomDisconnected",
+              src: async (context) => await roomDisconnected(context.page),
+              onDone: [
+                {
+                  target: "#bot.dead",
+                  cond: (_context, event) => event.data,
                 },
-                onError: {
+                {
                   target: "gettingFrame",
-                  internal: true,
-                },
-              },
-            },
-            loading: {
-              // TODO: replace this delay with a conditional to check if the join button exists
-              after: {
-                1000: { target: "notJoined" },
-              },
-            },
-            notJoined: {
-              invoke: [
-                {
-                  id: "gameStarted",
-                  src: async (context) => await gameStarted(context.frame),
-                  onDone: {
-                    target: "#bot.game.sittingOut",
-                  },
-                },
-                {
-                  id: "joinGame",
-                  src: (context) => joinGame(context.frame),
-                  onDone: [{ target: "joined" }],
-                  onError: {
-                    target: "loading",
-                  },
                 },
               ],
             },
-            joined: {
-              invoke: {
+          },
+          gettingFrame: {
+            invoke: {
+              id: "getFrame",
+              src: (context) => getFrame(context.page),
+              onDone: {
+                actions: assign({
+                  frame: (_context, event) => event.data,
+                }),
+                target: "loading",
+              },
+              onError: {
+                target: "noFrame",
+              },
+            },
+          },
+          loading: {
+            after: {
+              1000: { target: "notJoined" },
+            },
+          },
+          notJoined: {
+            invoke: [
+              {
                 id: "gameStarted",
                 src: async (context) => await gameStarted(context.frame),
                 onDone: {
-                  target: "#bot.game.playing",
+                  target: "#bot.game.sittingOut",
+                  cond: (_context, event) => !event.data,
                 },
+              },
+              {
+                id: "joinGame",
+                src: (context) => joinGame(context.frame),
+                onDone: [{ target: "joined" }],
                 onError: {
-                  target: "joined",
+                  target: "loading",
                 },
+              },
+            ],
+          },
+          joined: {
+            invoke: {
+              id: "waitForGameStarted",
+              src: async (context) => await waitForGameStarted(context.frame),
+              onDone: {
+                target: "#bot.game.playing",
               },
             },
           },
-
-          on: {
-            KILL: { target: "dead" },
+        },
+        on: {
+          KILL: { target: "dead" },
+        },
+      },
+      game: {
+        invoke: {
+          id: "waitForGameEnded",
+          src: (context) => waitForGameEnded(context.frame),
+          onDone: {
+            target: "#bot.room",
+            cond: (_context, event) => event.data,
           },
         },
-        game: {
-          states: {
-            sittingOut: {},
-            playing: {
-              initial: "unknown",
-              states: {
-                unknown: {
-                  invoke: {
-                    id: "isSelfTurn",
-                    src: async (context) => await isSelfTurn(context.frame),
-                    onDone: [
-                      {
-                        target: "selfTurn",
-                        cond: (_context, event) => event.data,
-                      },
-                      {
-                        target: "otherTurn",
-                        cond: (_context, event) => !event.data,
-                      },
-                    ],
-                    onError: {
-                      target: "unknown",
+        states: {
+          sittingOut: {},
+          playing: {
+            initial: "unknown",
+            states: {
+              unknown: {
+                invoke: {
+                  id: "isSelfTurn",
+                  src: async (context) => await isSelfTurn(context.frame),
+                  onDone: [
+                    {
+                      target: "selfTurn",
+                      cond: (_context, event) => event.data,
                     },
+                    {
+                      target: "otherTurn",
+                      cond: (_context, event) => !event.data,
+                    },
+                  ],
+                  onError: {
+                    target: "unknown",
                   },
                 },
-                selfTurn: {
-                  invoke: [
-                    {
-                      id: "isOtherTurn",
-                      src: async (context) => await isOtherTurn(context.frame),
-                      onDone: {
-                        target: "otherTurn",
-                        cond: (_context, event) => event.data,
-                      },
-                    },
-                    {
+              },
+              selfTurn: {
+                initial: "thinking",
+                states: {
+                  typing: {
+                    invoke: {
                       id: "typeWord",
                       src: async (context) =>
-                        await typeWord(context.frame, context.usedWords),
+                        await typeWord(context.frame, context.config),
                       onDone: {
-                        actions: assign({
-                          usedWords: (context: ContextData, event) => [
-                            ...context.usedWords,
-                            event.data,
-                          ],
-                        }),
+                        target: "thinking",
+                        cond: (_context, event) => !event.data,
+                        internal: false,
                       },
                     },
-                    {
-                      id: "gameEnded",
-                      src: (context) => gameEnded(context.frame),
-                      onDone: {
-                        target: "#bot.room",
-                        cond: (_context, event) => event.data,
+                  },
+                  thinking: {
+                    after: [
+                      {
+                        delay: (context) => context.config.thinkTime * 1000,
+                        target: "typing",
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-                otherTurn: {
-                  invoke: [
-                    {
-                      id: "isSelfTurn",
-                      src: async (context) => await isSelfTurn(context.frame),
-                      onDone: {
-                        target: "selfTurn",
-                        cond: (_context, event) => event.data,
-                      },
+                invoke: [
+                  {
+                    id: "waitForOtherTurn",
+                    src: async (context) =>
+                      await waitForOtherTurn(context.frame),
+                    onDone: {
+                      target: "otherTurn",
+                      cond: (_context, event) => event.data,
                     },
-                    {
-                      id: "gameEnded",
-                      src: (context) => gameEnded(context.frame),
-                      onDone: {
-                        target: "#bot.room",
-                        cond: (_context, event) => event.data,
-                      },
+                  },
+                ],
+              },
+              otherTurn: {
+                invoke: [
+                  {
+                    id: "waitForSelfTurn",
+                    src: async (context) =>
+                      await waitForSelfTurn(context.frame),
+                    onDone: {
+                      target: "selfTurn",
+                      cond: (_context, event) => event.data,
                     },
-                  ],
-                },
+                  },
+                ],
               },
             },
           },
-          on: {
-            KILL: { target: "dead" },
-          },
         },
-        dead: {
-          type: "final",
-          entry: "closeBrowser",
+        on: {
+          KILL: { target: "dead" },
+        },
+      },
+      dead: {
+        type: "final",
+        invoke: {
+          id: "closeBrowser",
+          src: async (context) => await context.browser.close(),
         },
       },
     },
-    {
-      actions: {
-        closeBrowser: (context) => {
-          context.browser.close();
-        },
-      },
-    }
-  );
+  });
 };

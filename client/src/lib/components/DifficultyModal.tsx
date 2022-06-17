@@ -97,14 +97,14 @@ const DifficultyModal = ({
             <SliderWithToolTip
               sliderValue={errorRate}
               setSliderValue={(value) =>
-                setConfig({ ...config, errorRate: value })
+                setConfig(() => ({ ...config, errorRate: value }))
               }
               colorScheme={"yellow"}
               postfix={"%"}
               defaultValue={errorRate}
               min={0}
-              max={1}
-              step={0.01}
+              max={50}
+              step={0.1}
             />
             <FormLabel>Think time:</FormLabel>
             <FormHelperText>{`${config.thinkTime}s`}</FormHelperText>

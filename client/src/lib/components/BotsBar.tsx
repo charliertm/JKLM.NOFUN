@@ -1,5 +1,5 @@
 import { DeleteIcon } from "@chakra-ui/icons";
-import { Flex, Heading, IconButton, Text } from "@chakra-ui/react";
+import { Flex, Heading, IconButton, Tag, Text } from "@chakra-ui/react";
 import { BotData } from "../types/bot";
 
 const BotCard = ({
@@ -9,7 +9,7 @@ const BotCard = ({
   bot: BotData;
   handleDelete: (id: string) => void;
 }) => {
-  const { id, nickname, roomCode } = bot;
+  const { id, nickname, roomCode, difficultyToken } = bot;
   return (
     <Flex
       direction={"row"}
@@ -33,6 +33,7 @@ const BotCard = ({
         </Heading>
         <Text color={"white"}>{roomCode}</Text>
       </Flex>
+      <Tag>{difficultyToken}</Tag>
       <IconButton
         aria-label="delete"
         icon={<DeleteIcon />}
