@@ -14,8 +14,6 @@ app.options("*", cors());
 
 app.use(express.json());
 
-const PORT = 3333;
-
 let botServices: { [id: string]: AnyInterpreter } = {};
 
 app.post("/bots", async (req, res) => {
@@ -44,14 +42,6 @@ app.post("/bots", async (req, res) => {
     );
     const botService = interpret(botMachine);
     botService.start();
-    // botService.onTransition((state) => {
-    //   console.log(
-    //     "\nplayer: ",
-    //     botService.machine.context.nickname,
-    //     "\nstate: ",
-    //     state.value
-    //   );
-    // });
     let validRoomCode = true;
     await waitFor(botService, (state) => state.matches("room.loading")).catch(
       () => {
@@ -86,6 +76,8 @@ app.delete("/bot/:id", async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`The application is listening on port ${PORT}!`);

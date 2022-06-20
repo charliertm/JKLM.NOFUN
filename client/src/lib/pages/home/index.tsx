@@ -3,6 +3,7 @@ import { RequestInit } from "next/dist/server/web/spec-extension/request";
 import { useState } from "react";
 import BotCreator from "../../components/BotCreator";
 import BotsBar from "../../components/BotsBar";
+import { API_URL } from "../../constants";
 import { BotConfig, BotData } from "../../types/bot";
 
 const Home = () => {
@@ -16,10 +17,7 @@ const Home = () => {
       credentials: "same-origin",
     };
     try {
-      const response = await fetch(
-        `http://localhost:3333/bot/${id}/`,
-        requestOptions
-      );
+      const response = await fetch(`${API_URL}/bot/${id}/`, requestOptions);
       const responseData = (await response.json()) as { id: string };
       const deletedId = responseData.id;
       const newBots = bots.filter((bot) => deletedId !== bot.id);
@@ -48,7 +46,7 @@ const Home = () => {
         config: config,
       }),
     };
-    const response = await fetch("http://localhost:3333/bots", requestOptions);
+    const response = await fetch(`${API_URL}/bots`, requestOptions);
     if (response.status === 400) {
       toast({
         title: "Invalid Room Code",

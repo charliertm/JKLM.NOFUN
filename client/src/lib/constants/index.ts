@@ -4,3 +4,5 @@ export const DIFFICULTY_COLORS: { [difficultyToken: string]: string } = {
   Unfair: "red",
   Custom: "cyan",
 };
+
+export const API_URL = "http://localhost:5000";

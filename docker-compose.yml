@@ -1,0 +1,27 @@
+version: "3"
+
+services:
+  api:
+    build:
+      context: ./api/
+    command: yarn start
+    hostname: api
+    container_name: api
+    volumes:
+      - ./api/:/usr/app
+      - /usr/app/node_modules
+    ports:
+      - "5000:5000"
+
+  client:
+    build:
+      context: ./client/
+    command: yarn start
+    container_name: client
+    volumes:
+      - ./client/:/usr/app
+      - /usr/app/node_modules
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"

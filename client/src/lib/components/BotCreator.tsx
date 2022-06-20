@@ -140,11 +140,6 @@ const BotCreator = ({ handleSubmit }: BotCreatorProps) => {
           onChange={(e) => setNickname(e.target.value)}
           value={nickname}
         />
-        {/* {!validNickname && (
-          <FormErrorMessage>
-            Must be between 2 and 20 characters
-          </FormErrorMessage>
-        )} */}
       </FormControl>
       <FormLabel>Difficulty:</FormLabel>
       <RadioGroup

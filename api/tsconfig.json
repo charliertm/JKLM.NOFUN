@@ -5,6 +5,8 @@
     "module": "commonjs",
     "target": "es6",
     "rootDir": "./",
+    "outDir": "./dist",
     "esModuleInterop": true
-  }
+  },
+  "exclude": ["node_modules"]
 }
