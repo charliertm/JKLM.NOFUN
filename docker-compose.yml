@@ -16,7 +16,7 @@ services:
   client:
     build:
       context: ./client/
-    command: yarn start
+    command: yarn dev
     container_name: client
     volumes:
       - ./client/:/usr/app
